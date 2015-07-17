@@ -53,29 +53,41 @@ public class Agent {
 			}
 			// Algo 2. A.
 		} else if (problem.getName().contains("E")) {
-			long a = blackPixel(Ravefigures.get("A"));
-			long b = blackPixel(Ravefigures.get("B"));
-			long c = blackPixel(Ravefigures.get("C"));
+			long c = blackPixel(Ravefigures.get("F"));
 
 			long g = blackPixel(Ravefigures.get("G"));
 			long h = blackPixel(Ravefigures.get("H"));
 
-			long xorABC = Math.abs(Math.abs(a - b) - c);
+			int state = -1;
+			long orAB = pixelCounter(Ravefigures.get("D"),
+					Ravefigures.get("E"), 1);
+			long xorAB = pixelCounter(Ravefigures.get("D"),
+					Ravefigures.get("E"), 2);
+			long andAB = pixelCounter(Ravefigures.get("D"),
+					Ravefigures.get("E"), 0);
 
-			long xorGH = Math.abs(g - h);
-			// Algo 2. B.
+			if (Math.abs(c - orAB) <= 0.1 * c) {
+				state = 1;
+			} else if (Math.abs(c - xorAB) <= 0.1 * c) {
+				state = 2;
+			} else if (Math.abs(c - andAB) <= 0.1 * c) {
+				state = 0;
+			}
+			System.out.println("OR: " + Math.abs(c - orAB));
+			System.out.println("XOR: " + Math.abs(c - xorAB));
+			System.out.println("AND: " + Math.abs(c - andAB));
+			System.out.println("STATE: " + state);
+			if (state > -1) {
+				long logicOpGH = pixelCounter(Ravefigures.get("G"),
+						Ravefigures.get("H"), state);
+				System.out.println("Logical: " + logicOpGH);
+				for (int i = 1; i <= 8; i++) {
+					long ans = blackPixel(Ravefigures.get(String.valueOf(i)));
+					System.out.println("ans " + i + ": " + ans);
+					if (Math.abs(ans - logicOpGH) <= 0.1 * ans) {
+						return i;
+					}
 
-			long orABC = Math.abs(a + b - c);
-			long orGH = g + h;
-
-			for (int i = 1; i <= 8; i++) {
-				long temp_pix = blackPixel(Ravefigures.get(String.valueOf(i)));
-				if (Math.abs(Math.abs(temp_pix - xorGH) - xorABC) <= error) {
-					System.out.println("Answer chosen: " + i);
-					return i;
-				} else if (Math.abs(Math.abs(temp_pix - orGH) - orABC) <= error) {
-					System.out.println("Answer chosen: " + i);
-					return i;
 				}
 			}
 		}
@@ -121,6 +133,52 @@ public class Agent {
 			pixelCount += pos ? blackPixel(figure) : -1 * blackPixel(figure);
 		}
 		return pixelCount;
+	}
+
+	private long pixelCounter(RavensFigure figure1, RavensFigure figure2,
+			int state) throws IOException {
+		long pixCounter = 0;
+		BufferedImage figure1Image = ImageIO
+				.read(new File(figure1.getVisual()));
+		BufferedImage figure2Image = ImageIO
+				.read(new File(figure2.getVisual()));
+		for (int i = 0; i < figure1Image.getWidth(); i++) {
+			for (int j = 0; j < figure1Image.getHeight(); j++) {
+
+				switch (state) {
+				// AND
+				case 0:
+					pixCounter += figure1Image.getRGB(i, j) != -1
+							&& figure2Image.getRGB(i, j) != -1 ? 1 : 0;
+					break;
+				// OR
+				case 1:
+
+					if (figure1Image.getRGB(i, j) != -1
+					|| figure2Image.getRGB(i, j) != -1) {
+						pixCounter++;
+					}
+
+					break;
+				// XOR
+				case 2:
+					if (figure1Image.getRGB(i, j) != -1
+							|| figure2Image.getRGB(i, j) != -1) {
+
+						if (!(figure1Image.getRGB(i, j) != -1 && figure2Image
+								.getRGB(i, j) != -1)) {
+							pixCounter++;
+						}
+					}
+
+					break;
+
+				}
+
+			}
+		}
+
+		return pixCounter;
 	}
 
 }
