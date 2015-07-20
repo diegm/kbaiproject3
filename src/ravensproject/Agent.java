@@ -14,10 +14,13 @@ public class Agent {
 	}
 
 	public int Solve(RavensProblem problem) throws IOException {
-		System.out.println("Ravens Problem: " + problem.getName());
 		HashMap<String, RavensFigure> Ravefigures = problem.getFigures();
+		if (problem.getName().contains("C") || problem.getProblemType().equals("2x2")) {
+			return problem.getProblemType().equals("2x2") ? Solver("A", "B",
+					"C", Ravefigures, 6)
+					: Solver("G", "H", "H", Ravefigures, 8);
+		}
 		int answer = -1;
-
 		// Algo 1.
 		List<RavensFigure> row1 = new ArrayList<>();
 		row1.add(Ravefigures.get("A"));
@@ -38,26 +41,16 @@ public class Agent {
 
 		long ansFigure_pix = Math.abs(2 * row2_pix - rowAns_pix - row1_pix);
 		long error = (long) (0.014 * ansFigure_pix);
-		System.out.println("error is: " + error);
 		if (problem.getName().contains("D")) {
-			System.out.println("ansFigure: " + ansFigure_pix);
 			for (int i = 1; i <= 8; i++) {
 				long temp_pix = blackPixel(Ravefigures.get(String.valueOf(i)));
-				System.out.println("Ans " + i + ": " + temp_pix);
-				System.out.println("difference is: "
-						+ Math.abs(temp_pix - ansFigure_pix));
 				if (Math.abs(temp_pix - ansFigure_pix) <= error) {
-					System.out.println("Answer chosen: " + i);
 					return i;
 				}
 			}
 			// Algo 2. A.
 		} else if (problem.getName().contains("E")) {
 			long c = blackPixel(Ravefigures.get("F"));
-
-			long g = blackPixel(Ravefigures.get("G"));
-			long h = blackPixel(Ravefigures.get("H"));
-
 			int state = -1;
 			long orAB = pixelCounter(Ravefigures.get("D"),
 					Ravefigures.get("E"), 1);
@@ -65,7 +58,6 @@ public class Agent {
 					Ravefigures.get("E"), 2);
 			long andAB = pixelCounter(Ravefigures.get("D"),
 					Ravefigures.get("E"), 0);
-
 			if (Math.abs(c - orAB) <= 0.1 * c) {
 				state = 1;
 			} else if (Math.abs(c - xorAB) <= 0.1 * c) {
@@ -73,17 +65,11 @@ public class Agent {
 			} else if (Math.abs(c - andAB) <= 0.1 * c) {
 				state = 0;
 			}
-			System.out.println("OR: " + Math.abs(c - orAB));
-			System.out.println("XOR: " + Math.abs(c - xorAB));
-			System.out.println("AND: " + Math.abs(c - andAB));
-			System.out.println("STATE: " + state);
 			if (state > -1) {
 				long logicOpGH = pixelCounter(Ravefigures.get("G"),
 						Ravefigures.get("H"), state);
-				System.out.println("Logical: " + logicOpGH);
 				for (int i = 1; i <= 8; i++) {
 					long ans = blackPixel(Ravefigures.get(String.valueOf(i)));
-					System.out.println("ans " + i + ": " + ans);
 					if (Math.abs(ans - logicOpGH) <= 0.1 * ans) {
 						return i;
 					}
@@ -91,32 +77,27 @@ public class Agent {
 				}
 			}
 		}
-
 		// Algo 4. catch all
 		long ans_pix = Math.abs(blackPixel(Ravefigures.get("G"))
 				- blackPixel(Ravefigures.get("D"))
 				+ blackPixel(Ravefigures.get("F")));
 		long closest_pix = Long.MAX_VALUE;
-		System.out.println("ans_pix: " + ans_pix);
+
 		for (int i = 1; i <= 8; i++) {
 			long diff = Math.abs(blackPixel(Ravefigures.get(String.valueOf(i)))
 					- ans_pix);
-			System.out.println("diff: " + diff);
 			if (diff < closest_pix) {
 				closest_pix = diff;
 				answer = i;
-
 			}
 		}
-		System.out.println("Answer chosen: " + answer);
 		return answer;
 	}
 
 	private long blackPixel(RavensFigure thisFigure) throws IOException {
 		BufferedImage figureImage = ImageIO.read(new File(thisFigure
 				.getVisual()));
-		long black = 0, total = figureImage.getWidth()
-				* figureImage.getHeight();
+		long black = 0;
 		for (int i = 0; i < figureImage.getWidth(); i++) {
 			for (int j = 0; j < figureImage.getHeight(); j++) {
 				black += figureImage.getRGB(i, j) != -1 ? 1 : 0;
@@ -144,24 +125,19 @@ public class Agent {
 				.read(new File(figure2.getVisual()));
 		for (int i = 0; i < figure1Image.getWidth(); i++) {
 			for (int j = 0; j < figure1Image.getHeight(); j++) {
-
 				switch (state) {
-				// AND
-				case 0:
+				case 0:// AND
 					pixCounter += figure1Image.getRGB(i, j) != -1
 							&& figure2Image.getRGB(i, j) != -1 ? 1 : 0;
 					break;
-				// OR
-				case 1:
+				case 1: // OR
 
 					if (figure1Image.getRGB(i, j) != -1
-					|| figure2Image.getRGB(i, j) != -1) {
+							|| figure2Image.getRGB(i, j) != -1) {
 						pixCounter++;
 					}
-
 					break;
-				// XOR
-				case 2:
+				case 2:// XOR
 					if (figure1Image.getRGB(i, j) != -1
 							|| figure2Image.getRGB(i, j) != -1) {
 
@@ -170,15 +146,42 @@ public class Agent {
 							pixCounter++;
 						}
 					}
-
 					break;
-
 				}
-
 			}
 		}
-
 		return pixCounter;
 	}
 
+	private int Solver(String fig1, String fig2, String fig3,
+			HashMap<String, RavensFigure> Ravefigures, int choiceNum)
+			throws IOException {
+		double ratio1 = blackRatio(Ravefigures.get(fig1));
+		double ratio2 = blackRatio(Ravefigures.get(fig2));
+		double ratio3 = blackRatio(Ravefigures.get(fig3));
+		double baseRatio = ratio1 - ratio2;
+		double closest = Double.MAX_VALUE;
+		int closestAns = -1;
+		for (int i = 1; i <= choiceNum; i++) {
+			double ratio = ratio3
+					- blackRatio(Ravefigures.get(Integer.toString(i)));
+			if (Math.abs(ratio - baseRatio) < closest) {
+				closest = Math.abs(ratio - baseRatio);
+				closestAns = i;
+			}
+		}
+		return closestAns;
+	}
+
+	private double blackRatio(RavensFigure thisFigure) throws IOException {
+		BufferedImage figureImage = ImageIO.read(new File(thisFigure
+				.getVisual()));
+		int black = 0, total = figureImage.getWidth() * figureImage.getHeight();
+		for (int i = 0; i < figureImage.getWidth(); i++) {
+			for (int j = 0; j < figureImage.getHeight(); j++) {
+				black += figureImage.getRGB(i, j) != -1 ? 1 : 0;
+			}
+		}
+		return black / (1.0 * total);
+	}
 }
